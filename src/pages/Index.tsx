@@ -6,6 +6,7 @@ import { SentimentAnalysis } from "@/components/SentimentAnalysis";
 import { CapacityOptimization } from "@/components/CapacityOptimization";
 import { RecommendationPanel } from "@/components/RecommendationPanel";
 import { FactorInputs } from "@/components/FactorInputs";
+import { CSVUpload } from "@/components/CSVUpload";
 import { Package, TrendingUp, Plane, DollarSign } from "lucide-react";
 
 const Index = () => {
@@ -63,10 +64,15 @@ const Index = () => {
             />
           </div>
 
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <DemandForecastChart />
+          {/* CSV Upload Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <CSVUpload onDataLoaded={(data) => console.log("CSV loaded:", data)} />
             <FactorInputs />
+          </div>
+
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 gap-6 mb-8">
+            <DemandForecastChart />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
