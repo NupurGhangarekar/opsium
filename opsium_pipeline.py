@@ -1,50 +1,52 @@
 import pandas as pd
+df = pd.read_csv("/content/dataset.csv")
+X = df[["promo_active", "sustainability_index", "sentiment_score"]]
+y = df["demand_units"]
 from sklearn.ensemble import RandomForestRegressor
 
-def run_opsium_pipeline(csv_path="opsium_input.csv"):
-    df = pd.read_csv(csv_path)
+rf = RandomForestRegressor(
+    n_estimators=200,
+    max_depth=5,        # keeps it crude & explainable
+    random_state=42
+)
 
-    # -------- Segment 1: Demand Forecasting --------
-    features = ["promo_intensity", "sentiment_score", "sustainability_index"]
-    X = df[features]
-    y = df["units_sold"]
+rf.fit(X, y)
+future = pd.DataFrame({
+    "promo_active": [1, 0, 1, 0],
+    "sustainability_index": [0.92, 0.93, 0.94, 0.95],
+    "sentiment_score": [0.85, 0.80, 0.88, 0.90]
+})
 
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X, y)
+forecast = rf.predict(future)
 
-    df["forecasted_demand"] = model.predict(X)
+forecast_df = pd.DataFrame({
+    "week": ["2024-08-05", "2024-08-12", "2024-08-19", "2024-08-26"],
+    "forecasted_demand_units": forecast.astype(int)
+})
+importances = pd.Series(
+    rf.feature_importances_,
+    index=X.columns
+).sort_values(ascending=False)
 
-    # -------- Segment 2: Capacity Optimization --------
-    df["allocated_kg"] = df[["forecasted_demand", "flight_capacity_kg"]].min(axis=1)
-    df["utilization_pct"] = df["allocated_kg"] / df["flight_capacity_kg"]
+print(importances)
+base = pd.DataFrame({
+    "promo_active": [0],
+    "sustainability_index": [0.90],
+    "sentiment_score": [0.85]
+})
 
-    def pricing(util):
-        if util > 0.85:
-            return "Premium"
-        elif util > 0.6:
-            return "Standard"
-        return "Discount"
+promo = base.copy()
+promo["promo_active"] = 1
 
-    df["pricing_tier"] = df["utilization_pct"].apply(pricing)
+impact = rf.predict(promo) - rf.predict(base)
+low_sus = pd.DataFrame({
+    "promo_active": [0],
+    "sustainability_index": [0.60],
+    "sentiment_score": [0.40]
+})
 
-    # Final output
-    output_cols = [
-        "date",
-        "customer_id",
-        "sku",
-        "forecasted_demand",
-        "flight_id",
-        "allocated_kg",
-        "utilization_pct",
-        "pricing_tier"
-    ]
+high_sus = low_sus.copy()
+high_sus["sustainability_index"] = 0.90
 
-    output = df[output_cols]
-    output.to_csv("opsium_output.csv", index=False)
-
-    return output
-
-
-if __name__ == "__main__":
-    result = run_opsium_pipeline()
-    print(result.head())
+rf.predict(high_sus) - rf.predict(low_sus)
+forecast_df
